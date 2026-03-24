@@ -109,6 +109,11 @@ class BotClient(discord.Client):
             return
 
         now = datetime.now(JST)
+        if not (
+            now.hour == 9 and now.minute <= 5 or now.hour == 8 and now.minute >= 55
+        ):
+            return
+
         lines = [f"# {now.month}/{now.day}"]
         for name, desc in balls:
             lines.append(f"## {name}")
