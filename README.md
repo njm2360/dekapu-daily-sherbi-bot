@@ -39,5 +39,5 @@ VRChatのログ（`output_log_*.txt`）に出力される以下のような行�
 
 | コマンド | 説明 |
 | -------- | ---- |
-| `/setchannel #channel` | 通知先チャンネルを設定する |
-| `/unsetchannel` | 通知チャンネルの設定を解除する |
+| `/setchannel [lang:ja\|en]` | このチャンネルを通知先に設定する（`lang` 省略時は `ja`） |
+| `/unsetchannel` | このチャンネルの通知設定を解除する |
