@@ -35,18 +35,14 @@ func dateHeader(now time.Time, lang ball.Lang) string {
 
 func buildMessage(kind Kind, ballIDs []int, now time.Time, lang ball.Lang) string {
 	var sb strings.Builder
-	switch kind {
-	case SeedUpdate:
+	sb.WriteString("# ")
+	sb.WriteString(dateHeader(now, lang))
+	if kind == SeedUpdate {
 		if lang == ball.LangEN {
-			sb.WriteString("# 🔄 Daily updated by seed change")
+			sb.WriteString(" (Daily updated by seed change)")
 		} else {
-			sb.WriteString("# 🔄 シード更新でデイリーが変わったよ")
+			sb.WriteString(" (シード更新でデイリーが変わったよ)")
 		}
-		sb.WriteString("\n## ")
-		sb.WriteString(dateHeader(now, lang))
-	default:
-		sb.WriteString("# ")
-		sb.WriteString(dateHeader(now, lang))
 	}
 
 	for _, info := range ball.Format(ballIDs, lang) {
