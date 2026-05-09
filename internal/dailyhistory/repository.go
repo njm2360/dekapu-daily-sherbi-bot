@@ -31,7 +31,7 @@ func (r *Repository) Latest() (*Record, error) {
 	err := r.db.QueryRow(`
         SELECT day_number, revision, detected_at
           FROM daily_history
-         ORDER BY detected_at DESC
+         ORDER BY day_number DESC, revision DESC
          LIMIT 1
     `).Scan(&rec.DayNumber, &rec.Revision, &detectedAt)
 	if errors.Is(err, sql.ErrNoRows) {
