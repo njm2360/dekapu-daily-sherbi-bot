@@ -7,8 +7,8 @@ import (
 )
 
 type Record struct {
-	DayNumber  int64
-	Revision   int64
+	DayNumber  int
+	Revision   int
 	BallIDs    []int
 	DetectedAt time.Time
 }
@@ -67,7 +67,7 @@ func (r *Repository) Latest() (*Record, error) {
 }
 
 // Insert writes a daily_history row plus its ball positions atomically.
-func (r *Repository) Insert(dayNumber, revision int64, ballIDs []int) error {
+func (r *Repository) Insert(dayNumber, revision int, ballIDs []int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err

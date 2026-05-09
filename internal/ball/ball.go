@@ -8,7 +8,7 @@ import (
 )
 
 func (d Daily) Date() time.Time {
-	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, int(d.DayNumber))
+	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, d.DayNumber)
 }
 
 type Lang string
@@ -30,7 +30,7 @@ type Info struct {
 var specialBallPattern = regexp.MustCompile(`\[DailySpecialBallManager\].*Day (\d+).*Special balls are ([\d,\s]+)`)
 
 type Daily struct {
-	DayNumber int64
+	DayNumber int
 	BallIDs   []int
 }
 
@@ -82,7 +82,7 @@ func Parse(line string) *Daily {
 	if m == nil {
 		return nil
 	}
-	day, err := strconv.ParseInt(m[1], 10, 64)
+	day, err := strconv.Atoi(m[1])
 	if err != nil {
 		return nil
 	}

@@ -10,7 +10,7 @@ import (
 
 type DailyStore interface {
 	Latest() (*dailyhistory.Record, error)
-	Insert(dayNumber, revision int64, ballIDs []int) error
+	Insert(dayNumber, revision int, ballIDs []int) error
 }
 
 type DailyNotifier interface {
@@ -55,7 +55,7 @@ func (d *Detector) OnLine(line string) {
 	defer d.mu.Unlock()
 
 	var (
-		revision int64
+		revision int
 		kind     Kind
 	)
 	switch {

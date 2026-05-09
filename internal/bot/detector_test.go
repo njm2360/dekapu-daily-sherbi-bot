@@ -13,8 +13,8 @@ import (
 // ---- fakes ----
 
 type insertCall struct {
-	dayNumber int64
-	revision  int64
+	dayNumber int
+	revision  int
 	ballIDs   []int
 }
 
@@ -33,7 +33,7 @@ func (f *fakeStore) Latest() (*dailyhistory.Record, error) {
 	return &c, nil
 }
 
-func (f *fakeStore) Insert(day, rev int64, ids []int) error {
+func (f *fakeStore) Insert(day, rev int, ids []int) error {
 	if f.insertErr != nil {
 		return f.insertErr
 	}
@@ -43,7 +43,7 @@ func (f *fakeStore) Insert(day, rev int64, ids []int) error {
 
 type notifyCall struct {
 	kind      Kind
-	dayNumber int64
+	dayNumber int
 	ballIDs   []int
 }
 
@@ -66,7 +66,7 @@ func mustDetector(t *testing.T, store DailyStore, notifier DailyNotifier) *Detec
 	return d
 }
 
-func line(day int64, balls ...int) string {
+func line(day int, balls ...int) string {
 	parts := ""
 	for i, b := range balls {
 		if i > 0 {
@@ -327,7 +327,7 @@ func TestNewDetector_StoreErrorPropagates(t *testing.T) {
 type errStore struct{ err error }
 
 func (s *errStore) Latest() (*dailyhistory.Record, error) { return nil, s.err }
-func (s *errStore) Insert(int64, int64, []int) error      { return nil }
+func (s *errStore) Insert(int, int, []int) error          { return nil }
 
 // ボール順序が異なれば別 balls とみなして SeedUpdate (位置情報は意味を持つ)。
 func TestDetector_OrderMatters(t *testing.T) {
