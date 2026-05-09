@@ -3,6 +3,8 @@ package dailyhistory
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -93,4 +95,81 @@ func (r *Repository) Insert(dayNumber, revision int, ballIDs []int) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// Match represents one (day_number, revision) entry whose ball set
+// fully contained the queried ball IDs, with that revision's full ball list.
+type Match struct {
+	DayNumber int
+	Revision  int
+	BallIDs   []int
+}
+
+// FindByBalls returns up to `limit` most recent days where any revision's
+// ball set contained ALL of the given ballIDs (set match, order independent).
+// Returned matches may include multiple revisions for the same day.
+// Results are ordered by day_number DESC, then revision ASC.
+func (r *Repository) FindByBalls(ballIDs []int, limit int) ([]Match, error) {
+	if len(ballIDs) == 0 || limit <= 0 {
+		return nil, nil
+	}
+
+	// dedup the input ball IDs to keep COUNT(DISTINCT ball_id) = N consistent
+	seen := make(map[int]struct{}, len(ballIDs))
+	uniq := make([]int, 0, len(ballIDs))
+	for _, id := range ballIDs {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(uniq)), ",")
+	query := fmt.Sprintf(`
+        WITH matching AS (
+          SELECT day_number, revision
+            FROM daily_history_balls
+           WHERE ball_id IN (%s)
+           GROUP BY day_number, revision
+          HAVING COUNT(DISTINCT ball_id) = ?
+        ),
+        top_days AS (
+          SELECT DISTINCT day_number FROM matching
+           ORDER BY day_number DESC LIMIT ?
+        )
+        SELECT m.day_number, m.revision, b.position, b.ball_id
+          FROM matching m
+          JOIN top_days t ON m.day_number = t.day_number
+          JOIN daily_history_balls b
+               ON b.day_number = m.day_number AND b.revision = m.revision
+         ORDER BY m.day_number DESC, m.revision ASC, b.position ASC
+    `, placeholders)
+
+	args := make([]any, 0, len(uniq)+2)
+	for _, id := range uniq {
+		args = append(args, id)
+	}
+	args = append(args, len(uniq), limit)
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matches []Match
+	var current *Match
+	for rows.Next() {
+		var day, rev, pos, ballID int
+		if err := rows.Scan(&day, &rev, &pos, &ballID); err != nil {
+			return nil, err
+		}
+		if current == nil || current.DayNumber != day || current.Revision != rev {
+			matches = append(matches, Match{DayNumber: day, Revision: rev})
+			current = &matches[len(matches)-1]
+		}
+		current.BallIDs = append(current.BallIDs, ballID)
+	}
+	return matches, rows.Err()
 }

@@ -40,3 +40,4 @@ CREATE TABLE IF NOT EXISTS daily_history_balls (
 );
 
 CREATE INDEX IF NOT EXISTS idx_daily_history_detected_at ON daily_history(detected_at);
+CREATE INDEX IF NOT EXISTS idx_daily_history_balls_ball_day ON daily_history_balls(ball_id, day_number DESC);

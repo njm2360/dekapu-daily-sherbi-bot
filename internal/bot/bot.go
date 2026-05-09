@@ -6,6 +6,7 @@ import (
 	"log"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -167,6 +168,34 @@ var slashCommands = []*discordgo.ApplicationCommand{
 		Name:        "unsetmentionrole",
 		Description: "通知時のメンションロール設定を解除します",
 	},
+	{
+		Name:        "finddaily",
+		Description: "指定した色を含むデイリーを検索します(最大20件)",
+		Options: []*discordgo.ApplicationCommandOption{
+			ballColorOption("color1", "色1", true),
+			ballColorOption("color2", "色2 (オプション)", false),
+			ballColorOption("color3", "色3 (オプション)", false),
+			ballColorOption("color4", "色4 (オプション)", false),
+		},
+	},
+}
+
+func ballColorOption(name, desc string, required bool) *discordgo.ApplicationCommandOption {
+	ids := ball.AllIDs()
+	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(ids))
+	for _, id := range ids {
+		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+			Name:  ball.Name(id, ball.LangJA),
+			Value: id,
+		})
+	}
+	return &discordgo.ApplicationCommandOption{
+		Type:        discordgo.ApplicationCommandOptionInteger,
+		Name:        name,
+		Description: desc,
+		Required:    required,
+		Choices:     choices,
+	}
 }
 
 func (b *Bot) registerCommands() error {
@@ -188,7 +217,19 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 		b.cmdSetMentionRole(s, i, data)
 	case "unsetmentionrole":
 		b.cmdUnsetMentionRole(s, i)
+	case "finddaily":
+		b.cmdFindDaily(s, i, data)
 	}
+}
+
+func replyEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
+	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: content,
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
 }
 
 func reply(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
@@ -298,4 +339,74 @@ func (b *Bot) cmdUnsetMentionRole(s *discordgo.Session, i *discordgo.Interaction
 	} else {
 		reply(s, i, "メンションロールは設定されていないよ。")
 	}
+}
+
+const findDailyLimit = 20
+
+func (b *Bot) cmdFindDaily(s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData) {
+	var ids []int
+	for _, opt := range data.Options {
+		switch opt.Name {
+		case "color1", "color2", "color3", "color4":
+			ids = append(ids, int(opt.IntValue()))
+		}
+	}
+	matches, err := b.history.FindByBalls(ids, findDailyLimit)
+	if err != nil {
+		replyEphemeral(s, i, "検索に失敗したよ。")
+		log.Printf("FindByBalls: %v", err)
+		return
+	}
+
+	replyEphemeral(s, i, formatFindDailyResult(ids, matches))
+}
+
+func formatFindDailyResult(query []int, matches []dailyhistory.Match) string {
+	queryNames := make([]string, len(query))
+	for j, id := range query {
+		queryNames[j] = ball.Name(id, ball.LangJA)
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "検索条件: %s\n", strings.Join(queryNames, " / "))
+
+	if len(matches) == 0 {
+		sb.WriteString("該当する日が見つからなかったよ。")
+		return sb.String()
+	}
+
+	prevDay := -1
+	for _, m := range matches {
+		balls := ballNames(m.BallIDs, ball.LangJA)
+		if m.DayNumber != prevDay {
+			date := ball.Daily{DayNumber: m.DayNumber}.Date()
+			fmt.Fprintf(&sb, "- %s: %s", date.Format("2006/01/02"), balls)
+			prevDay = m.DayNumber
+		} else {
+			fmt.Fprintf(&sb, " → %s", balls)
+		}
+		if m.Revision == 0 && hasNextRevisionForDay(matches, m.DayNumber, m.Revision) {
+			// next revision exists — leave the line open
+			continue
+		}
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}
+
+func hasNextRevisionForDay(matches []dailyhistory.Match, day, rev int) bool {
+	for _, m := range matches {
+		if m.DayNumber == day && m.Revision > rev {
+			return true
+		}
+	}
+	return false
+}
+
+func ballNames(ids []int, lang ball.Lang) string {
+	parts := make([]string, len(ids))
+	for j, id := range ids {
+		parts[j] = ball.Name(id, lang)
+	}
+	return strings.Join(parts, "・")
 }

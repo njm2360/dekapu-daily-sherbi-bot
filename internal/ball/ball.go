@@ -2,6 +2,7 @@ package ball
 
 import (
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -103,6 +104,26 @@ func Parse(line string) *Daily {
 		return nil
 	}
 	return &Daily{DayNumber: day, BallIDs: ids}
+}
+
+func AllIDs() []int {
+	ids := make([]int, 0, len(names[LangJA]))
+	for id := range names[LangJA] {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	return ids
+}
+
+func Name(id int, lang Lang) string {
+	dict, ok := names[lang]
+	if !ok {
+		dict = names[LangJA]
+	}
+	if info, ok := dict[id]; ok {
+		return info.Name
+	}
+	return ""
 }
 
 func Format(ids []int, lang Lang) []Info {
