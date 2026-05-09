@@ -4,7 +4,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
+
+func (d Daily) Date() time.Time {
+	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, int(d.DayNumber))
+}
 
 type Lang string
 

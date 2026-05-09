@@ -69,8 +69,8 @@ func NewNotifier(s *discordgo.Session, r *settings.Repository) *Notifier {
 	return &Notifier{session: s, repo: r}
 }
 
-func (n *Notifier) Notify(kind Kind, ballIDs []int) {
-	now := time.Now().In(jst)
+func (n *Notifier) Notify(kind Kind, daily ball.Daily) {
+	date := daily.Date()
 
 	channels, err := n.repo.AllChannels()
 	if err != nil {
@@ -79,7 +79,7 @@ func (n *Notifier) Notify(kind Kind, ballIDs []int) {
 	}
 
 	for _, cfg := range channels {
-		message := buildMessage(kind, ballIDs, now, cfg.Lang)
+		message := buildMessage(kind, daily.BallIDs, date, cfg.Lang)
 		channelID := strconv.FormatInt(cfg.ChannelID, 10)
 
 		roleID, hasRole, err := n.repo.GetMentionRole(cfg.GuildID)
@@ -107,7 +107,7 @@ func (n *Notifier) Notify(kind Kind, ballIDs []int) {
 				channelID, cfg.GuildID, err)
 			continue
 		}
-		log.Printf("Sent special balls %v to channel %s (guild=%s, lang=%s)",
-			ballIDs, channelID, cfg.GuildID, cfg.Lang)
+		log.Printf("Sent special balls %v (day=%d) to channel %s (guild=%s, lang=%s)",
+			daily.BallIDs, daily.DayNumber, channelID, cfg.GuildID, cfg.Lang)
 	}
 }

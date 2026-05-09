@@ -14,7 +14,7 @@ type DailyStore interface {
 }
 
 type DailyNotifier interface {
-	Notify(kind Kind, ballIDs []int)
+	Notify(kind Kind, daily ball.Daily)
 }
 
 type Detector struct {
@@ -80,5 +80,5 @@ func (d *Detector) OnLine(line string) {
 	}
 	log.Printf("Detected daily (kind=%d, day=%d, rev=%d, balls=%v)",
 		kind, parsed.DayNumber, revision, parsed.BallIDs)
-	d.notifier.Notify(kind, parsed.BallIDs)
+	d.notifier.Notify(kind, *parsed)
 }

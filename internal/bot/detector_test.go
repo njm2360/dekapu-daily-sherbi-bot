@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/dailyhistory"
 )
 
@@ -41,16 +42,17 @@ func (f *fakeStore) Insert(day, rev int64, ids []int) error {
 }
 
 type notifyCall struct {
-	kind    Kind
-	ballIDs []int
+	kind      Kind
+	dayNumber int64
+	ballIDs   []int
 }
 
 type fakeNotifier struct {
 	calls []notifyCall
 }
 
-func (f *fakeNotifier) Notify(kind Kind, ids []int) {
-	f.calls = append(f.calls, notifyCall{kind, append([]int(nil), ids...)})
+func (f *fakeNotifier) Notify(kind Kind, daily ball.Daily) {
+	f.calls = append(f.calls, notifyCall{kind, daily.DayNumber, append([]int(nil), daily.BallIDs...)})
 }
 
 // ---- helpers ----
@@ -100,7 +102,7 @@ func TestDetector_FirstLine_NotifiesNewDay(t *testing.T) {
 	d.OnLine(line(100, 5, 15, 6))
 
 	assertInserts(t, store.inserts, []insertCall{{100, 0, []int{5, 15, 6}}})
-	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, []int{5, 15, 6}}})
+	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 100, []int{5, 15, 6}}})
 }
 
 // 同じ Day, 同じ balls の Rejoin は通知しない。
@@ -138,8 +140,8 @@ func TestDetector_SeedUpdateMidDay(t *testing.T) {
 		{100, 1, []int{1, 2, 3}},
 	})
 	assertNotifies(t, notifier.calls, []notifyCall{
-		{NewDay, []int{5, 15, 6}},
-		{SeedUpdate, []int{1, 2, 3}},
+		{NewDay, 100, []int{5, 15, 6}},
+		{SeedUpdate, 100, []int{1, 2, 3}},
 	})
 }
 
@@ -159,9 +161,9 @@ func TestDetector_MultipleSeedUpdatesIncrementRevision(t *testing.T) {
 		{100, 2, []int{7, 8, 9}},
 	})
 	assertNotifies(t, notifier.calls, []notifyCall{
-		{NewDay, []int{5, 15, 6}},
-		{SeedUpdate, []int{1, 2, 3}},
-		{SeedUpdate, []int{7, 8, 9}},
+		{NewDay, 100, []int{5, 15, 6}},
+		{SeedUpdate, 100, []int{1, 2, 3}},
+		{SeedUpdate, 100, []int{7, 8, 9}},
 	})
 }
 
@@ -179,8 +181,8 @@ func TestDetector_NewDayDifferentBalls(t *testing.T) {
 		{101, 0, []int{1, 2, 3}},
 	})
 	assertNotifies(t, notifier.calls, []notifyCall{
-		{NewDay, []int{5, 15, 6}},
-		{NewDay, []int{1, 2, 3}},
+		{NewDay, 100, []int{5, 15, 6}},
+		{NewDay, 101, []int{1, 2, 3}},
 	})
 }
 
@@ -199,8 +201,8 @@ func TestDetector_NewDayCoincidentallySameBalls(t *testing.T) {
 		{101, 0, []int{5, 15, 6}},
 	})
 	assertNotifies(t, notifier.calls, []notifyCall{
-		{NewDay, []int{5, 15, 6}},
-		{NewDay, []int{5, 15, 6}},
+		{NewDay, 100, []int{5, 15, 6}},
+		{NewDay, 101, []int{5, 15, 6}},
 	})
 }
 
@@ -258,7 +260,7 @@ func TestDetector_RestartThenSeedUpdate_IncrementsRevisionFromStore(t *testing.T
 	d.OnLine(line(101, 7, 8, 9))
 
 	assertInserts(t, store.inserts, []insertCall{{101, 3, []int{7, 8, 9}}})
-	assertNotifies(t, notifier.calls, []notifyCall{{SeedUpdate, []int{7, 8, 9}}})
+	assertNotifies(t, notifier.calls, []notifyCall{{SeedUpdate, 101, []int{7, 8, 9}}})
 }
 
 // 再起動後に新しい Day が来たら NewDay (rev=0)。
@@ -276,7 +278,7 @@ func TestDetector_RestartThenNewDay_ResetsRevision(t *testing.T) {
 	d.OnLine(line(102, 1, 2, 3))
 
 	assertInserts(t, store.inserts, []insertCall{{102, 0, []int{1, 2, 3}}})
-	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, []int{1, 2, 3}}})
+	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 102, []int{1, 2, 3}}})
 }
 
 // 4 個玉、5 個玉などボール数が変わっても検知できる (将来増加想定)。
@@ -311,7 +313,7 @@ func TestDetector_InsertError_NoNotify_NoStateAdvance(t *testing.T) {
 	d.OnLine(line(100, 5, 15, 6))
 
 	assertInserts(t, store.inserts, []insertCall{{100, 0, []int{5, 15, 6}}})
-	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, []int{5, 15, 6}}})
+	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 100, []int{5, 15, 6}}})
 }
 
 // LatestDaily がエラーを返したら NewDetector も失敗する。
@@ -341,8 +343,8 @@ func TestDetector_OrderMatters(t *testing.T) {
 		{100, 1, []int{6, 15, 5}},
 	})
 	assertNotifies(t, notifier.calls, []notifyCall{
-		{NewDay, []int{5, 15, 6}},
-		{SeedUpdate, []int{6, 15, 5}},
+		{NewDay, 100, []int{5, 15, 6}},
+		{SeedUpdate, 100, []int{6, 15, 5}},
 	})
 }
 
@@ -372,8 +374,8 @@ func TestDetector_FullScenario(t *testing.T) {
 		{101, 0, []int{1, 2, 3}},
 	})
 	assertNotifies(t, notifier.calls, []notifyCall{
-		{NewDay, []int{5, 15, 6}},
-		{SeedUpdate, []int{1, 2, 3}},
-		{NewDay, []int{1, 2, 3}},
+		{NewDay, 100, []int{5, 15, 6}},
+		{SeedUpdate, 100, []int{1, 2, 3}},
+		{NewDay, 101, []int{1, 2, 3}},
 	})
 }
