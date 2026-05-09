@@ -232,13 +232,6 @@ func replyEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, conten
 	})
 }
 
-func reply(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Content: content},
-	})
-}
-
 func channelMention(channelID string) string {
 	return "<#" + channelID + ">"
 }
@@ -258,7 +251,7 @@ func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate
 	channelID := i.ChannelID
 	chID, err := strconv.ParseInt(channelID, 10, 64)
 	if err != nil {
-		reply(s, i, "チャンネルIDの解析に失敗したよ。")
+		replyEphemeral(s, i, "チャンネルIDの解析に失敗したよ。")
 		return
 	}
 
@@ -266,7 +259,7 @@ func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate
 		log.Printf("EnsureGuild: %v", err)
 	}
 	if err := b.repo.SetChannel(guildID, chID, lang); err != nil {
-		reply(s, i, "設定の保存に失敗したよ。")
+		replyEphemeral(s, i, "設定の保存に失敗したよ。")
 		log.Printf("SetChannel: %v", err)
 		return
 	}
@@ -275,27 +268,27 @@ func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate
 	if lang == ball.LangEN {
 		label = "English"
 	}
-	reply(s, i, fmt.Sprintf("%s に通知を送るよ！（言語: %s）", channelMention(channelID), label))
+	replyEphemeral(s, i, fmt.Sprintf("%s に通知を送るよ！（言語: %s）", channelMention(channelID), label))
 	log.Printf("Set channel %s (lang=%s) for guild %s", channelID, lang, guildID)
 }
 
 func (b *Bot) cmdUnsetChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	chID, err := strconv.ParseInt(i.ChannelID, 10, 64)
 	if err != nil {
-		reply(s, i, "チャンネルIDの解析に失敗したよ。")
+		replyEphemeral(s, i, "チャンネルIDの解析に失敗したよ。")
 		return
 	}
 	ok, err := b.repo.UnsetChannel(i.GuildID, chID)
 	if err != nil {
-		reply(s, i, "設定の解除に失敗したよ。")
+		replyEphemeral(s, i, "設定の解除に失敗したよ。")
 		log.Printf("UnsetChannel: %v", err)
 		return
 	}
 	mention := channelMention(i.ChannelID)
 	if ok {
-		reply(s, i, fmt.Sprintf("%s の通知チャンネル設定を解除したよ！", mention))
+		replyEphemeral(s, i, fmt.Sprintf("%s の通知チャンネル設定を解除したよ！", mention))
 	} else {
-		reply(s, i, fmt.Sprintf("%s は通知チャンネルに設定されていないよ。", mention))
+		replyEphemeral(s, i, fmt.Sprintf("%s は通知チャンネルに設定されていないよ。", mention))
 	}
 }
 
@@ -307,37 +300,37 @@ func (b *Bot) cmdSetMentionRole(s *discordgo.Session, i *discordgo.InteractionCr
 		}
 	}
 	if roleID == "" {
-		reply(s, i, "ロールが指定されていないよ。")
+		replyEphemeral(s, i, "ロールが指定されていないよ。")
 		return
 	}
 	rid, err := strconv.ParseInt(roleID, 10, 64)
 	if err != nil {
-		reply(s, i, "ロールIDの解析に失敗したよ。")
+		replyEphemeral(s, i, "ロールIDの解析に失敗したよ。")
 		return
 	}
 	if err := b.repo.EnsureGuild(i.GuildID); err != nil {
 		log.Printf("EnsureGuild: %v", err)
 	}
 	if err := b.repo.SetMentionRole(i.GuildID, rid); err != nil {
-		reply(s, i, "設定の保存に失敗したよ。")
+		replyEphemeral(s, i, "設定の保存に失敗したよ。")
 		log.Printf("SetMentionRole: %v", err)
 		return
 	}
-	reply(s, i, fmt.Sprintf("通知時に <@&%s> をメンションするよ！", roleID))
+	replyEphemeral(s, i, fmt.Sprintf("通知時に <@&%s> をメンションするよ！", roleID))
 	log.Printf("Set mention role %s for guild %s", roleID, i.GuildID)
 }
 
 func (b *Bot) cmdUnsetMentionRole(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ok, err := b.repo.UnsetMentionRole(i.GuildID)
 	if err != nil {
-		reply(s, i, "設定の解除に失敗したよ。")
+		replyEphemeral(s, i, "設定の解除に失敗したよ。")
 		log.Printf("UnsetMentionRole: %v", err)
 		return
 	}
 	if ok {
-		reply(s, i, "メンションロールの設定を解除したよ！")
+		replyEphemeral(s, i, "メンションロールの設定を解除したよ！")
 	} else {
-		reply(s, i, "メンションロールは設定されていないよ。")
+		replyEphemeral(s, i, "メンションロールは設定されていないよ。")
 	}
 }
 
