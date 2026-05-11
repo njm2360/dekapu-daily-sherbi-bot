@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -74,36 +75,43 @@ func (n *Notifier) Notify(kind Kind, daily ball.Daily) {
 		return
 	}
 
+	var wg sync.WaitGroup
 	for _, cfg := range channels {
-		message := buildMessage(kind, daily.BallIDs, date, cfg.Lang)
-		channelID := strconv.FormatInt(cfg.ChannelID, 10)
+		wg.Add(1)
+		go func(cfg settings.ChannelConfig) {
+			defer wg.Done()
 
-		roleID, hasRole, err := n.repo.GetMentionRole(cfg.GuildID)
-		if err != nil {
-			log.Printf("Notify: GetMentionRole guild=%s: %v", cfg.GuildID, err)
-		}
-		content := message
-		if hasRole {
-			content = fmt.Sprintf("<@&%d>\n%s", roleID, message)
-		}
+			message := buildMessage(kind, daily.BallIDs, date, cfg.Lang)
+			channelID := strconv.FormatInt(cfg.ChannelID, 10)
 
-		if _, err := n.session.ChannelMessageSend(channelID, content); err != nil {
-			var rest *discordgo.RESTError
-			if errors.As(err, &rest) && rest.Response != nil {
-				switch rest.Response.StatusCode {
-				case 404:
-					log.Printf("Channel %s not found (guild=%s)", channelID, cfg.GuildID)
-					continue
-				case 403:
-					log.Printf("No permission to access channel %s (guild=%s)", channelID, cfg.GuildID)
-					continue
-				}
+			roleID, hasRole, err := n.repo.GetMentionRole(cfg.GuildID)
+			if err != nil {
+				log.Printf("Notify: GetMentionRole guild=%s: %v", cfg.GuildID, err)
 			}
-			log.Printf("ChannelMessageSend failed (channel=%s, guild=%s): %v",
-				channelID, cfg.GuildID, err)
-			continue
-		}
-		log.Printf("Sent special balls %v (day=%d) to channel %s (guild=%s, lang=%s)",
-			daily.BallIDs, daily.DayNumber, channelID, cfg.GuildID, cfg.Lang)
+			content := message
+			if hasRole {
+				content = fmt.Sprintf("<@&%d>\n%s", roleID, message)
+			}
+
+			if _, err := n.session.ChannelMessageSend(channelID, content); err != nil {
+				var rest *discordgo.RESTError
+				if errors.As(err, &rest) && rest.Response != nil {
+					switch rest.Response.StatusCode {
+					case 404:
+						log.Printf("Channel %s not found (guild=%s)", channelID, cfg.GuildID)
+						return
+					case 403:
+						log.Printf("No permission to access channel %s (guild=%s)", channelID, cfg.GuildID)
+						return
+					}
+				}
+				log.Printf("ChannelMessageSend failed (channel=%s, guild=%s): %v",
+					channelID, cfg.GuildID, err)
+				return
+			}
+			log.Printf("Sent special balls %v (day=%d) to channel %s (guild=%s, lang=%s)",
+				daily.BallIDs, daily.DayNumber, channelID, cfg.GuildID, cfg.Lang)
+		}(cfg)
 	}
+	wg.Wait()
 }
