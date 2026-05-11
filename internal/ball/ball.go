@@ -123,7 +123,7 @@ func Name(id int, lang Lang) string {
 	if info, ok := dict[id]; ok {
 		return info.Name
 	}
-	return ""
+	return unknownInfo(id, lang).Name
 }
 
 func Format(ids []int, lang Lang) []Info {
@@ -136,8 +136,15 @@ func Format(ids []int, lang Lang) []Info {
 		if info, ok := dict[id]; ok {
 			out = append(out, info)
 		} else {
-			out = append(out, Info{Name: strconv.Itoa(id), Description: ""})
+			out = append(out, unknownInfo(id, lang))
 		}
 	}
 	return out
+}
+
+func unknownInfo(id int, lang Lang) Info {
+	if lang == LangEN {
+		return Info{Name: "Unknown (ID:" + strconv.Itoa(id) + ")", Description: "Please check in the world"}
+	}
+	return Info{Name: "未定義 (ID:" + strconv.Itoa(id) + ")", Description: "ワールド内で確認してね"}
 }
