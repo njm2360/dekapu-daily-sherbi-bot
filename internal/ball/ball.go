@@ -55,6 +55,7 @@ var names = map[Lang]map[int]Info{
 		17: {"黄色", "パレッタチャンスを早く回すよ"},
 		18: {"ラベンダー", "パレッタJPプログレッシブカウンターを増やすよ"},
 		19: {"ライム", "メダル投入量を一時的に増やすよ"},
+		20: {"若葉", "たまにレアドロップを出現させるよ"},
 	},
 	LangEN: {
 		1:  {"Orange", "Chains itself then changes to another color"},
@@ -75,6 +76,7 @@ var names = map[Lang]map[int]Info{
 		17: {"Yellow", "Speeds up Paletta Chance game"},
 		18: {"Lavender", "Increases Paletta JACKPOT prog. counter"},
 		19: {"Lime", "Temporarily increases medal insertion amount"},
+		20: {"Sprout", "Has small chance to spawn rare resources"},
 	},
 }
 
