@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -17,8 +16,6 @@ import (
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/settings"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/watcher"
 )
-
-var jst = time.FixedZone("JST", 9*3600)
 
 type Bot struct {
 	session  *discordgo.Session
