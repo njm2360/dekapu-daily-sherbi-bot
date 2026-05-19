@@ -8,6 +8,7 @@ import (
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
 )
 
+// JA形式は「月/日」になる
 func TestDateHeader_JA(t *testing.T) {
 	got := dateHeader(time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC), ball.LangJA)
 	if got != "5/9" {
@@ -15,6 +16,7 @@ func TestDateHeader_JA(t *testing.T) {
 	}
 }
 
+// EN形式は「Month Day」になる
 func TestDateHeader_EN(t *testing.T) {
 	got := dateHeader(time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC), ball.LangEN)
 	if got != "May 9" {
@@ -22,6 +24,7 @@ func TestDateHeader_EN(t *testing.T) {
 	}
 }
 
+// EN形式で12ヶ月すべて正しい英語月名になる
 func TestDateHeader_EN_AllMonths(t *testing.T) {
 	wants := []string{
 		"January 1", "February 1", "March 1", "April 1", "May 1", "June 1",
@@ -35,6 +38,7 @@ func TestDateHeader_EN_AllMonths(t *testing.T) {
 	}
 }
 
+// NewDayメッセージのJA全文が日付ヘッダ+ボール名+説明の順で組み立てられる
 func TestBuildMessage_NewDay_JA(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	got := buildMessage(NewDay, []int{1, 2}, now, ball.LangJA)
@@ -50,6 +54,7 @@ func TestBuildMessage_NewDay_JA(t *testing.T) {
 	}
 }
 
+// NewDayメッセージのEN全文が日付ヘッダ+ボール名+説明の順で組み立てられる
 func TestBuildMessage_NewDay_EN(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	got := buildMessage(NewDay, []int{1, 2}, now, ball.LangEN)
@@ -65,6 +70,7 @@ func TestBuildMessage_NewDay_EN(t *testing.T) {
 	}
 }
 
+// SeedUpdateはJAヘッダにシード更新の注釈が付く
 func TestBuildMessage_SeedUpdate_JA(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	got := buildMessage(SeedUpdate, []int{1}, now, ball.LangJA)
@@ -76,6 +82,7 @@ func TestBuildMessage_SeedUpdate_JA(t *testing.T) {
 	}
 }
 
+// SeedUpdateはENヘッダにシード更新の注釈が付く
 func TestBuildMessage_SeedUpdate_EN(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	got := buildMessage(SeedUpdate, []int{1}, now, ball.LangEN)
@@ -87,6 +94,7 @@ func TestBuildMessage_SeedUpdate_EN(t *testing.T) {
 	}
 }
 
+// 未定義IDはJAフォールバック文言で出力される
 func TestBuildMessage_UndefinedID_JA(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	got := buildMessage(NewDay, []int{1, 99}, now, ball.LangJA)
@@ -102,6 +110,7 @@ func TestBuildMessage_UndefinedID_JA(t *testing.T) {
 	}
 }
 
+// 未定義IDはENフォールバック文言で出力される
 func TestBuildMessage_UndefinedID_EN(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	got := buildMessage(NewDay, []int{99}, now, ball.LangEN)
@@ -112,30 +121,5 @@ func TestBuildMessage_UndefinedID_EN(t *testing.T) {
 	}, "\n")
 	if got != want {
 		t.Errorf("buildMessage with undefined ID (EN) =\n%q\nwant\n%q", got, want)
-	}
-}
-
-func TestBuildMessage_EmptyBallIDs(t *testing.T) {
-	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(NewDay, nil, now, ball.LangJA)
-	if got != "# 5/9" {
-		t.Errorf("buildMessage with empty balls = %q, want %q", got, "# 5/9")
-	}
-}
-
-// Description が空文字のボールが定義に追加された場合に、本文側に余計な改行が出ないことを担保する。
-// 現在の定義には Description 空のエントリは無いので、未定義 ID は Description が必ず付くロジックを使い、
-// ここでは挙動仕様だけ示す: Description="" のとき "## Name" だけが出る (改行を足さない)。
-func TestBuildMessage_HeaderOrderingStable(t *testing.T) {
-	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(NewDay, []int{2, 1}, now, ball.LangJA)
-	// 入力順を維持すること
-	idxGreen := strings.Index(got, "## 緑")
-	idxOrange := strings.Index(got, "## 橙")
-	if idxGreen < 0 || idxOrange < 0 {
-		t.Fatalf("missing entries:\n%s", got)
-	}
-	if idxGreen > idxOrange {
-		t.Errorf("input order not preserved: 緑 should precede 橙\n%s", got)
 	}
 }

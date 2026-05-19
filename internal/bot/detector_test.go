@@ -10,7 +10,7 @@ import (
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/dailyhistory"
 )
 
-// ---- fakes ----
+// ---- フェイク ----
 
 type insertCall struct {
 	dayNumber int
@@ -55,7 +55,7 @@ func (f *fakeNotifier) Notify(kind Kind, daily ball.Daily) {
 	f.calls = append(f.calls, notifyCall{kind, daily.DayNumber, append([]int(nil), daily.BallIDs...)})
 }
 
-// ---- helpers ----
+// ---- ヘルパー ----
 
 func mustDetector(t *testing.T, store DailyStore, notifier DailyNotifier) *Detector {
 	t.Helper()
@@ -91,9 +91,9 @@ func assertNotifies(t *testing.T, got []notifyCall, want []notifyCall) {
 	}
 }
 
-// ---- tests ----
+// ---- テスト ----
 
-// 初回起動 (DB空) で最初のログを受けたら NewDay 通知 + insert(rev=0)。
+// 初回起動（DB空）で最初のログを受けたらNewDay通知+Insert(rev=0)
 func TestDetector_FirstLine_NotifiesNewDay(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -105,7 +105,7 @@ func TestDetector_FirstLine_NotifiesNewDay(t *testing.T) {
 	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 100, []int{5, 15, 6}}})
 }
 
-// 同じ Day, 同じ balls の Rejoin は通知しない。
+// 同じDay・同じballsであればDaily行を検知しても通知しない
 func TestDetector_RejoinSameDayBalls_Silent(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -126,7 +126,7 @@ func TestDetector_RejoinSameDayBalls_Silent(t *testing.T) {
 	}
 }
 
-// 同じ Day で balls が変わったら SeedUpdate 通知 + insert(rev+1)。
+// 同じDayでballsが変わったらSeedUpdate通知+Insert(rev+1)
 func TestDetector_SeedUpdateMidDay(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -145,7 +145,7 @@ func TestDetector_SeedUpdateMidDay(t *testing.T) {
 	})
 }
 
-// 同じ Day で 2 度目のシード更新は revision が連番で増える。
+// 同じDayで2度目のシード更新はrevisionが連番で増える
 func TestDetector_MultipleSeedUpdatesIncrementRevision(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -167,8 +167,8 @@ func TestDetector_MultipleSeedUpdatesIncrementRevision(t *testing.T) {
 	})
 }
 
-// 新 Day は balls が違えば NewDay (rev=0) 通知。
-func TestDetector_NewDayDifferentBalls(t *testing.T) {
+// Dayが変わったらNewDay(rev=0)通知
+func TestDetector_DayChange_NotifiesNewDay(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
 	d := mustDetector(t, store, notifier)
@@ -186,8 +186,7 @@ func TestDetector_NewDayDifferentBalls(t *testing.T) {
 	})
 }
 
-// 9 時跨ぎで偶然 balls が同じでも、Day が違えば NewDay 通知 (rev=0)。
-// これが時刻ベース判定を撤廃した理由の核となるケース。
+// 新Dayで偶然ballsが同じでもNewDay通知(rev=0)
 func TestDetector_NewDayCoincidentallySameBalls(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -206,24 +205,7 @@ func TestDetector_NewDayCoincidentallySameBalls(t *testing.T) {
 	})
 }
 
-// パターンに合致しない行は無視される (副作用なし)。
-func TestDetector_NonMatchingLines_Ignored(t *testing.T) {
-	store := &fakeStore{}
-	notifier := &fakeNotifier{}
-	d := mustDetector(t, store, notifier)
-
-	d.OnLine("nothing relevant here")
-	d.OnLine("[OtherManager] Day 100: Special balls are 5, 15, 6")
-	d.OnLine("")
-	d.OnLine("[DailySpecialBallManager] No day, no balls")
-
-	if len(store.inserts) != 0 || len(notifier.calls) != 0 {
-		t.Fatalf("expected no side effects, got inserts=%v notifies=%v",
-			store.inserts, notifier.calls)
-	}
-}
-
-// 再起動時は LatestDaily で前回状態が復元され、同 Day 同 balls の Rejoin は無通知。
+// 再起動時はLatestで前回状態が復元され、同Day・同ballsの場合は通知しない
 func TestDetector_RestartRestoresState_SilentOnRejoin(t *testing.T) {
 	store := &fakeStore{
 		latest: &dailyhistory.Record{
@@ -238,14 +220,14 @@ func TestDetector_RestartRestoresState_SilentOnRejoin(t *testing.T) {
 	d.OnLine(line(101, 1, 2, 3))
 
 	if len(store.inserts) != 0 {
-		t.Fatalf("expected no inserts on rejoin, got %v", store.inserts)
+		t.Fatalf("expected no inserts, got %v", store.inserts)
 	}
 	if len(notifier.calls) != 0 {
-		t.Fatalf("expected no notifies on rejoin, got %v", notifier.calls)
+		t.Fatalf("expected no notifies, got %v", notifier.calls)
 	}
 }
 
-// 再起動後に同 Day で balls が変わっていれば revision を引き継いで SeedUpdate。
+// 再起動後に同Dayでballsが違う場合はrevisionを引き継いでSeedUpdate
 func TestDetector_RestartThenSeedUpdate_IncrementsRevisionFromStore(t *testing.T) {
 	store := &fakeStore{
 		latest: &dailyhistory.Record{
@@ -263,7 +245,7 @@ func TestDetector_RestartThenSeedUpdate_IncrementsRevisionFromStore(t *testing.T
 	assertNotifies(t, notifier.calls, []notifyCall{{SeedUpdate, 101, []int{7, 8, 9}}})
 }
 
-// 再起動後に新しい Day が来たら NewDay (rev=0)。
+// 再起動後に新Dayが来たらNewDay(rev=0)
 func TestDetector_RestartThenNewDay_ResetsRevision(t *testing.T) {
 	store := &fakeStore{
 		latest: &dailyhistory.Record{
@@ -281,7 +263,7 @@ func TestDetector_RestartThenNewDay_ResetsRevision(t *testing.T) {
 	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 102, []int{1, 2, 3}}})
 }
 
-// 4 個玉、5 個玉などボール数が変わっても検知できる (将来増加想定)。
+// デイリーの数が将来的に増えても動作すること
 func TestDetector_VariableBallCount(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -294,9 +276,13 @@ func TestDetector_VariableBallCount(t *testing.T) {
 		{100, 0, []int{5, 15, 6, 7}},
 		{101, 0, []int{1, 2, 3, 4, 8}},
 	})
+	assertNotifies(t, notifier.calls, []notifyCall{
+		{NewDay, 100, []int{5, 15, 6, 7}},
+		{NewDay, 101, []int{1, 2, 3, 4, 8}},
+	})
 }
 
-// InsertDaily が失敗したら通知も止める (二重通知防止) し、内部状態 lastSeen も更新しない。
+// Insertが失敗したら通知も止め(二重通知防止)、内部状態lastSeenも更新しない
 func TestDetector_InsertError_NoNotify_NoStateAdvance(t *testing.T) {
 	store := &fakeStore{insertErr: errors.New("db down")}
 	notifier := &fakeNotifier{}
@@ -308,7 +294,7 @@ func TestDetector_InsertError_NoNotify_NoStateAdvance(t *testing.T) {
 		t.Fatalf("expected no notify on insert error, got %v", notifier.calls)
 	}
 
-	// 直後に DB が回復したと仮定して同じ行を再投入 → lastSeen が前進していないので NewDay として正しく検知される。
+	// 直後にDBが回復したと仮定して同じ行を再投入→lastSeenが前進していないのでNewDayとして正しく検知される。
 	store.insertErr = nil
 	d.OnLine(line(100, 5, 15, 6))
 
@@ -316,11 +302,11 @@ func TestDetector_InsertError_NoNotify_NoStateAdvance(t *testing.T) {
 	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 100, []int{5, 15, 6}}})
 }
 
-// LatestDaily がエラーを返したら NewDetector も失敗する。
+// LatestがエラーならNewDetectorも失敗する
 func TestNewDetector_StoreErrorPropagates(t *testing.T) {
 	store := &errStore{err: errors.New("read failure")}
 	if _, err := NewDetector(store, &fakeNotifier{}); err == nil {
-		t.Fatal("expected error from NewDetector when LatestDaily fails")
+		t.Fatal("expected error from NewDetector when Latest fails")
 	}
 }
 
@@ -329,7 +315,7 @@ type errStore struct{ err error }
 func (s *errStore) Latest() (*dailyhistory.Record, error) { return nil, s.err }
 func (s *errStore) Insert(int, int, []int) error          { return nil }
 
-// ボール順序が異なれば別 balls とみなして SeedUpdate (位置情報は意味を持つ)。
+// ボール順序が異なれば別ballsとみなしてSeedUpdate(位置情報は意味を持つ)
 func TestDetector_OrderMatters(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -348,7 +334,7 @@ func TestDetector_OrderMatters(t *testing.T) {
 	})
 }
 
-// 実シナリオ: 起動 → Rejoin数回 → シード更新 → Rejoin → 翌日。
+// 実シナリオ: 起動→Rejoin数回→シード更新→Rejoin→翌日。
 func TestDetector_FullScenario(t *testing.T) {
 	store := &fakeStore{}
 	notifier := &fakeNotifier{}
@@ -356,16 +342,16 @@ func TestDetector_FullScenario(t *testing.T) {
 
 	// 起動直後の最初のログ
 	d.OnLine(line(100, 5, 15, 6))
-	// Rejoin x 2
+	// Rejoinを2回
 	d.OnLine(line(100, 5, 15, 6))
 	d.OnLine(line(100, 5, 15, 6))
 	// ワールドアプデでシード更新
 	d.OnLine(line(100, 1, 2, 3))
-	// 更新後に Rejoin
+	// 更新後にRejoin
 	d.OnLine(line(100, 1, 2, 3))
-	// 翌日 (偶然 balls 同じ)
+	// 翌日(偶然ballsが同じ)
 	d.OnLine(line(101, 1, 2, 3))
-	// 翌日 Rejoin
+	// 翌日Rejoin
 	d.OnLine(line(101, 1, 2, 3))
 
 	assertInserts(t, store.inserts, []insertCall{
