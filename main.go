@@ -19,11 +19,13 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	if err := os.MkdirAll("data", 0o755); err != nil {
+	const dataDir = "data"
+
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		log.Fatalf("mkdir data: %v", err)
 	}
 
-	conn, err := db.Open(filepath.Join("data", "data.db"))
+	conn, err := db.Open(filepath.Join(dataDir, "data.db"))
 	if err != nil {
 		log.Fatalf("db.Open: %v", err)
 	}
@@ -46,7 +48,7 @@ func main() {
 		log.Fatal("DISCORD_BOT_TOKEN is required")
 	}
 
-	b, err := bot.New(settingsRepo, historyRepo, token, logDir, "data")
+	b, err := bot.New(settingsRepo, historyRepo, token, logDir, dataDir)
 	if err != nil {
 		log.Fatalf("bot.New: %v", err)
 	}

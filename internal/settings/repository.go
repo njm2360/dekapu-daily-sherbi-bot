@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 )
 
 const mentionRoleKey = "mention_role_id"
@@ -13,7 +13,7 @@ const mentionRoleKey = "mention_role_id"
 type ChannelConfig struct {
 	GuildID   string
 	ChannelID int64
-	Lang      ball.Lang
+	Lang      language.Lang
 }
 
 type Repository struct {
@@ -52,11 +52,11 @@ func (r *Repository) AllChannels() ([]ChannelConfig, error) {
 	var out []ChannelConfig
 	for rows.Next() {
 		var c ChannelConfig
-		var lang string
-		if err := rows.Scan(&c.GuildID, &c.ChannelID, &lang); err != nil {
+		var langStr string
+		if err := rows.Scan(&c.GuildID, &c.ChannelID, &langStr); err != nil {
 			return nil, err
 		}
-		c.Lang = ball.Lang(lang)
+		c.Lang = language.Lang(langStr)
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -82,7 +82,7 @@ func (r *Repository) Channels(guildID string) ([]int64, error) {
 	return out, rows.Err()
 }
 
-func (r *Repository) SetChannel(guildID string, channelID int64, lang ball.Lang) error {
+func (r *Repository) SetChannel(guildID string, channelID int64, lang language.Lang) error {
 	_, err := r.db.Exec(`
         INSERT INTO notification_channels(guild_id, channel_id, lang, updated_at)
              VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))

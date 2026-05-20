@@ -13,6 +13,7 @@ import (
 
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/dailyhistory"
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/settings"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/watcher"
 )
@@ -131,13 +132,19 @@ func (b *Bot) registerHandlers() {
 var slashCommands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "setchannel",
-		Description: "このチャンネルに通知を送るよう設定します",
+		Description: "Set this channel to receive notifications",
+		DescriptionLocalizations: &map[discordgo.Locale]string{
+			discordgo.Japanese: "このチャンネルに通知を送るよう設定します",
+		},
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "lang",
-				Description: "通知言語（デフォルトは ja）",
-				Required:    false,
+				Description: "Notification language (default: ja)",
+				DescriptionLocalizations: map[discordgo.Locale]string{
+					discordgo.Japanese: "通知言語（デフォルトは ja）",
+				},
+				Required: false,
 				Choices: []*discordgo.ApplicationCommandOptionChoice{
 					{Name: "ja", Value: "ja"},
 					{Name: "en", Value: "en"},
@@ -147,51 +154,72 @@ var slashCommands = []*discordgo.ApplicationCommand{
 	},
 	{
 		Name:        "unsetchannel",
-		Description: "このチャンネルの通知設定を解除します",
+		Description: "Remove notification settings for this channel",
+		DescriptionLocalizations: &map[discordgo.Locale]string{
+			discordgo.Japanese: "このチャンネルの通知設定を解除します",
+		},
 	},
 	{
 		Name:        "setmentionrole",
-		Description: "通知時にメンションするロールを設定します",
+		Description: "Set a role to mention on notification",
+		DescriptionLocalizations: &map[discordgo.Locale]string{
+			discordgo.Japanese: "通知時にメンションするロールを設定します",
+		},
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionRole,
 				Name:        "role",
-				Description: "メンションするロール",
-				Required:    true,
+				Description: "Role to mention",
+				DescriptionLocalizations: map[discordgo.Locale]string{
+					discordgo.Japanese: "メンションするロール",
+				},
+				Required: true,
 			},
 		},
 	},
 	{
 		Name:        "unsetmentionrole",
-		Description: "通知時のメンションロール設定を解除します",
+		Description: "Remove mention role settings",
+		DescriptionLocalizations: &map[discordgo.Locale]string{
+			discordgo.Japanese: "通知時のメンションロール設定を解除します",
+		},
 	},
 	{
 		Name:        "finddaily",
-		Description: "指定した色を含むデイリーを検索します(最大20件)",
+		Description: "Search for dailies containing the specified colors (max 20)",
+		DescriptionLocalizations: &map[discordgo.Locale]string{
+			discordgo.Japanese: "指定した色を含むデイリーを検索します(最大20件)",
+		},
 		Options: []*discordgo.ApplicationCommandOption{
-			ballColorOption("color1", "色1", true),
-			ballColorOption("color2", "色2 (オプション)", false),
-			ballColorOption("color3", "色3 (オプション)", false),
-			ballColorOption("color4", "色4 (オプション)", false),
+			ballColorOption("color1", "Color 1", "色1", true),
+			ballColorOption("color2", "Color 2 (optional)", "色2 (オプション)", false),
+			ballColorOption("color3", "Color 3 (optional)", "色3 (オプション)", false),
+			ballColorOption("color4", "Color 4 (optional)", "色4 (オプション)", false),
 		},
 	},
 }
 
-func ballColorOption(name, desc string, required bool) *discordgo.ApplicationCommandOption {
+func ballColorOption(name, descEN, descJA string, required bool) *discordgo.ApplicationCommandOption {
 	ids := ball.AllIDs()
 	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(ids))
 	for _, id := range ids {
 		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-			Name:  ball.Name(id, ball.LangJA),
+			Name: ball.Name(id, language.LangEN),
+			NameLocalizations: map[discordgo.Locale]string{
+				discordgo.Japanese: ball.Name(id, language.LangJA),
+			},
 			Value: id,
 		})
 	}
 	return &discordgo.ApplicationCommandOption{
 		Type:        discordgo.ApplicationCommandOptionInteger,
 		Name:        name,
-		Description: desc,
-		Required:    required,
-		Choices:     choices,
+		Description: descEN,
+		DescriptionLocalizations: map[discordgo.Locale]string{
+			discordgo.Japanese: descJA,
+		},
+		Required: required,
+		Choices:  choices,
 	}
 }
 
@@ -234,12 +262,12 @@ func channelMention(channelID string) string {
 }
 
 func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData) {
-	lang := ball.LangJA
+	l := language.LangJA
 	for _, opt := range data.Options {
 		if opt.Name == "lang" {
 			v := opt.StringValue()
-			if ball.Lang(v).Valid() {
-				lang = ball.Lang(v)
+			if language.Lang(v).Valid() {
+				l = language.Lang(v)
 			}
 		}
 	}
@@ -255,18 +283,18 @@ func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate
 	if err := b.repo.EnsureGuild(guildID); err != nil {
 		log.Printf("EnsureGuild: %v", err)
 	}
-	if err := b.repo.SetChannel(guildID, chID, lang); err != nil {
+	if err := b.repo.SetChannel(guildID, chID, l); err != nil {
 		replyEphemeral(s, i, "設定の保存に失敗したよ。")
 		log.Printf("SetChannel: %v", err)
 		return
 	}
 
 	label := "日本語"
-	if lang == ball.LangEN {
+	if l == language.LangEN {
 		label = "English"
 	}
 	replyEphemeral(s, i, fmt.Sprintf("%s に通知を送るよ！（言語: %s）", channelMention(channelID), label))
-	log.Printf("Set channel %s (lang=%s) for guild %s", channelID, lang, guildID)
+	log.Printf("Set channel %s (lang=%s) for guild %s", channelID, l, guildID)
 }
 
 func (b *Bot) cmdUnsetChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -342,32 +370,45 @@ func (b *Bot) cmdFindDaily(s *discordgo.Session, i *discordgo.InteractionCreate,
 		}
 	}
 	matches, err := b.history.FindByBalls(ids, findDailyLimit)
+	l := discordLocaleToLang(i.Locale)
 	if err != nil {
-		replyEphemeral(s, i, "検索に失敗したよ。")
+		if l == language.LangEN {
+			replyEphemeral(s, i, "Search failed.")
+		} else {
+			replyEphemeral(s, i, "検索に失敗したよ。")
+		}
 		log.Printf("FindByBalls: %v", err)
 		return
 	}
 
-	replyEphemeral(s, i, formatFindDailyResult(ids, matches))
+	replyEphemeral(s, i, formatFindDailyResult(ids, matches, l))
 }
 
-func formatFindDailyResult(query []int, matches []dailyhistory.Match) string {
+func formatFindDailyResult(query []int, matches []dailyhistory.Match, lang language.Lang) string {
 	queryNames := make([]string, len(query))
 	for j, id := range query {
-		queryNames[j] = ball.Name(id, ball.LangJA)
+		queryNames[j] = ball.Name(id, lang)
 	}
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "検索条件: %s\n", strings.Join(queryNames, " / "))
+	if lang == language.LangEN {
+		fmt.Fprintf(&sb, "Query: %s\n", strings.Join(queryNames, " / "))
+	} else {
+		fmt.Fprintf(&sb, "検索条件: %s\n", strings.Join(queryNames, " / "))
+	}
 
 	if len(matches) == 0 {
-		sb.WriteString("該当する日が見つからなかったよ。")
+		if lang == language.LangEN {
+			sb.WriteString("No matching days found.")
+		} else {
+			sb.WriteString("該当する日が見つからなかったよ。")
+		}
 		return sb.String()
 	}
 
 	prevDay := -1
 	for _, m := range matches {
-		balls := ballNames(m.BallIDs, ball.LangJA)
+		balls := ballNames(m.BallIDs, lang)
 		if m.DayNumber != prevDay {
 			date := ball.Daily{DayNumber: m.DayNumber}.Date()
 			fmt.Fprintf(&sb, "- %s: %s", date.Format("2006/01/02"), balls)
@@ -393,10 +434,21 @@ func hasNextRevisionForDay(matches []dailyhistory.Match, day, rev int) bool {
 	return false
 }
 
-func ballNames(ids []int, lang ball.Lang) string {
+func discordLocaleToLang(locale discordgo.Locale) language.Lang {
+	if locale == discordgo.Japanese {
+		return language.LangJA
+	}
+	return language.LangEN
+}
+
+func ballNames(ids []int, lang language.Lang) string {
 	parts := make([]string, len(ids))
 	for j, id := range ids {
 		parts[j] = ball.Name(id, lang)
 	}
-	return strings.Join(parts, "・")
+	sep := "・"
+	if lang == language.LangEN {
+		sep = " / "
+	}
+	return strings.Join(parts, sep)
 }

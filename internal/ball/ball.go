@@ -6,21 +6,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 )
 
 func (d Daily) Date() time.Time {
 	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, d.DayNumber)
-}
-
-type Lang string
-
-const (
-	LangJA Lang = "ja"
-	LangEN Lang = "en"
-)
-
-func (l Lang) Valid() bool {
-	return l == LangJA || l == LangEN
 }
 
 type Info struct {
@@ -35,8 +26,8 @@ type Daily struct {
 	BallIDs   []int
 }
 
-var names = map[Lang]map[int]Info{
-	LangJA: {
+var names = map[language.Lang]map[int]Info{
+	language.LangJA: {
 		1:  {"橙", "連チャンした後に別のボールに変わるよ"},
 		2:  {"緑", "ルーレットフィーバーを回すよ"},
 		4:  {"ピンク", "ボールをさらに増やすよ"},
@@ -57,7 +48,7 @@ var names = map[Lang]map[int]Info{
 		19: {"ライム", "メダル投入量を一時的に増やすよ"},
 		20: {"若葉", "たまにレアドロップを出現させるよ"},
 	},
-	LangEN: {
+	language.LangEN: {
 		1:  {"Orange", "Chains itself then changes to another color"},
 		2:  {"Green", "Spins fever roulettes"},
 		4:  {"Pink", "Spawns more balls"},
@@ -109,18 +100,18 @@ func Parse(line string) *Daily {
 }
 
 func AllIDs() []int {
-	ids := make([]int, 0, len(names[LangJA]))
-	for id := range names[LangJA] {
+	ids := make([]int, 0, len(names[language.LangJA]))
+	for id := range names[language.LangJA] {
 		ids = append(ids, id)
 	}
 	sort.Ints(ids)
 	return ids
 }
 
-func Name(id int, lang Lang) string {
+func Name(id int, lang language.Lang) string {
 	dict, ok := names[lang]
 	if !ok {
-		dict = names[LangJA]
+		dict = names[language.LangJA]
 	}
 	if info, ok := dict[id]; ok {
 		return info.Name
@@ -128,10 +119,10 @@ func Name(id int, lang Lang) string {
 	return unknownInfo(id, lang).Name
 }
 
-func Format(ids []int, lang Lang) []Info {
+func Format(ids []int, lang language.Lang) []Info {
 	dict, ok := names[lang]
 	if !ok {
-		dict = names[LangJA]
+		dict = names[language.LangJA]
 	}
 	out := make([]Info, 0, len(ids))
 	for _, id := range ids {
@@ -144,8 +135,8 @@ func Format(ids []int, lang Lang) []Info {
 	return out
 }
 
-func unknownInfo(id int, lang Lang) Info {
-	if lang == LangEN {
+func unknownInfo(id int, lang language.Lang) Info {
+	if lang == language.LangEN {
 		return Info{Name: "Unknown (ID:" + strconv.Itoa(id) + ")", Description: "Please check in the world"}
 	}
 	return Info{Name: "未定義 (ID:" + strconv.Itoa(id) + ")", Description: "ワールド内で確認してね"}

@@ -3,6 +3,8 @@ package ball
 import (
 	"reflect"
 	"testing"
+
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 )
 
 func TestParse_Valid(t *testing.T) {
@@ -45,16 +47,16 @@ func TestParse_IncludesUndefinedIDs(t *testing.T) {
 }
 
 func TestName_Defined(t *testing.T) {
-	if got := Name(1, LangJA); got != "橙" {
+	if got := Name(1, language.LangJA); got != "橙" {
 		t.Errorf("Name(1, ja) = %q, want 橙", got)
 	}
-	if got := Name(1, LangEN); got != "Orange" {
+	if got := Name(1, language.LangEN); got != "Orange" {
 		t.Errorf("Name(1, en) = %q, want Orange", got)
 	}
 }
 
 func TestName_Undefined_JA(t *testing.T) {
-	got := Name(99, LangJA)
+	got := Name(99, language.LangJA)
 	want := "未定義 (ID:99)"
 	if got != want {
 		t.Errorf("Name(99, ja) = %q, want %q", got, want)
@@ -62,7 +64,7 @@ func TestName_Undefined_JA(t *testing.T) {
 }
 
 func TestName_Undefined_EN(t *testing.T) {
-	got := Name(99, LangEN)
+	got := Name(99, language.LangEN)
 	want := "Unknown (ID:99)"
 	if got != want {
 		t.Errorf("Name(99, en) = %q, want %q", got, want)
@@ -70,16 +72,16 @@ func TestName_Undefined_EN(t *testing.T) {
 }
 
 func TestName_InvalidLangFallsBackToJA(t *testing.T) {
-	if got := Name(1, Lang("xx")); got != "橙" {
+	if got := Name(1, language.Lang("xx")); got != "橙" {
 		t.Errorf("Name(1, xx) = %q, want 橙 (JA fallback)", got)
 	}
-	if got := Name(99, Lang("xx")); got != "未定義 (ID:99)" {
+	if got := Name(99, language.Lang("xx")); got != "未定義 (ID:99)" {
 		t.Errorf("Name(99, xx) = %q, want 未定義 (ID:99)", got)
 	}
 }
 
 func TestFormat_AllDefined(t *testing.T) {
-	got := Format([]int{1, 2}, LangJA)
+	got := Format([]int{1, 2}, language.LangJA)
 	want := []Info{
 		{Name: "橙", Description: "連チャンした後に別のボールに変わるよ"},
 		{Name: "緑", Description: "ルーレットフィーバーを回すよ"},
@@ -90,7 +92,7 @@ func TestFormat_AllDefined(t *testing.T) {
 }
 
 func TestFormat_MixedUndefined_JA(t *testing.T) {
-	got := Format([]int{1, 99, 2}, LangJA)
+	got := Format([]int{1, 99, 2}, language.LangJA)
 	want := []Info{
 		{Name: "橙", Description: "連チャンした後に別のボールに変わるよ"},
 		{Name: "未定義 (ID:99)", Description: "ワールド内で確認してね"},
@@ -102,7 +104,7 @@ func TestFormat_MixedUndefined_JA(t *testing.T) {
 }
 
 func TestFormat_MixedUndefined_EN(t *testing.T) {
-	got := Format([]int{1, 99}, LangEN)
+	got := Format([]int{1, 99}, language.LangEN)
 	want := []Info{
 		{Name: "Orange", Description: "Chains itself then changes to another color"},
 		{Name: "Unknown (ID:99)", Description: "Please check in the world"},
@@ -113,7 +115,7 @@ func TestFormat_MixedUndefined_EN(t *testing.T) {
 }
 
 func TestFormat_InvalidLangFallsBackToJA(t *testing.T) {
-	got := Format([]int{99}, Lang("xx"))
+	got := Format([]int{99}, language.Lang("xx"))
 	want := []Info{{Name: "未定義 (ID:99)", Description: "ワールド内で確認してね"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Format = %v, want %v", got, want)
@@ -129,10 +131,10 @@ func TestAllIDs_SortedAndContainsOnlyDefined(t *testing.T) {
 }
 
 func TestLang_Valid(t *testing.T) {
-	if !LangJA.Valid() || !LangEN.Valid() {
-		t.Error("LangJA/LangEN must be valid")
+	if !language.LangJA.Valid() || !language.LangEN.Valid() {
+		t.Error("language.LangJA/language.LangEN must be valid")
 	}
-	if Lang("xx").Valid() {
+	if language.Lang("xx").Valid() {
 		t.Error("invalid lang should not be Valid()")
 	}
 }

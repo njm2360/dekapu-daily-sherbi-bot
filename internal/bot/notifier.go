@@ -12,6 +12,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/settings"
 )
 
@@ -27,19 +28,19 @@ const (
 	SeedUpdate
 )
 
-func dateHeader(now time.Time, lang ball.Lang) string {
-	if lang == ball.LangEN {
+func dateHeader(now time.Time, lang language.Lang) string {
+	if lang == language.LangEN {
 		return fmt.Sprintf("%s %d", monthsEN[int(now.Month())-1], now.Day())
 	}
 	return fmt.Sprintf("%d/%d", int(now.Month()), now.Day())
 }
 
-func buildMessage(kind Kind, ballIDs []int, now time.Time, lang ball.Lang) string {
+func buildMessage(kind Kind, ballIDs []int, now time.Time, lang language.Lang) string {
 	var sb strings.Builder
 	sb.WriteString("# ")
 	sb.WriteString(dateHeader(now, lang))
 	if kind == SeedUpdate {
-		if lang == ball.LangEN {
+		if lang == language.LangEN {
 			sb.WriteString(" (Daily updated by seed change)")
 		} else {
 			sb.WriteString(" (シード更新でデイリーが変わったよ)")
