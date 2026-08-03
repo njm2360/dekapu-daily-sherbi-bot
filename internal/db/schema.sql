@@ -7,10 +7,10 @@ CREATE TABLE IF NOT EXISTS guilds (
 );
 
 CREATE TABLE IF NOT EXISTS notification_channels (
-    guild_id   TEXT    NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE,
-    channel_id INTEGER NOT NULL,
-    lang       TEXT    NOT NULL DEFAULT 'ja',
-    updated_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    guild_id   TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE,
+    channel_id TEXT NOT NULL,
+    lang       TEXT NOT NULL DEFAULT 'ja',
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     PRIMARY KEY (guild_id, channel_id)
 );
 

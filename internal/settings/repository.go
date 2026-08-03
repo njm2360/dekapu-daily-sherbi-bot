@@ -3,7 +3,6 @@ package settings
 import (
 	"database/sql"
 	"errors"
-	"strconv"
 
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 )
@@ -12,7 +11,7 @@ const mentionRoleKey = "mention_role_id"
 
 type ChannelConfig struct {
 	GuildID   string
-	ChannelID int64
+	ChannelID string
 	Lang      language.Lang
 }
 
@@ -62,7 +61,7 @@ func (r *Repository) AllChannels() ([]ChannelConfig, error) {
 	return out, rows.Err()
 }
 
-func (r *Repository) Channels(guildID string) ([]int64, error) {
+func (r *Repository) Channels(guildID string) ([]string, error) {
 	rows, err := r.db.Query(
 		"SELECT channel_id FROM notification_channels WHERE guild_id = ?",
 		guildID,
@@ -71,9 +70,9 @@ func (r *Repository) Channels(guildID string) ([]int64, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []int64
+	var out []string
 	for rows.Next() {
-		var id int64
+		var id string
 		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
@@ -82,7 +81,7 @@ func (r *Repository) Channels(guildID string) ([]int64, error) {
 	return out, rows.Err()
 }
 
-func (r *Repository) SetChannel(guildID string, channelID int64, lang language.Lang) error {
+func (r *Repository) SetChannel(guildID, channelID string, lang language.Lang) error {
 	_, err := r.db.Exec(`
         INSERT INTO notification_channels(guild_id, channel_id, lang, updated_at)
              VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -93,7 +92,7 @@ func (r *Repository) SetChannel(guildID string, channelID int64, lang language.L
 	return err
 }
 
-func (r *Repository) UnsetChannel(guildID string, channelID int64) (bool, error) {
+func (r *Repository) UnsetChannel(guildID, channelID string) (bool, error) {
 	res, err := r.db.Exec(
 		"DELETE FROM notification_channels WHERE guild_id = ? AND channel_id = ?",
 		guildID, channelID,
@@ -147,20 +146,12 @@ func (r *Repository) DeleteSetting(guildID, key string) (bool, error) {
 
 // ---- mention role (KV wrapper) ----
 
-func (r *Repository) GetMentionRole(guildID string) (int64, bool, error) {
-	v, ok, err := r.GetSetting(guildID, mentionRoleKey)
-	if err != nil || !ok {
-		return 0, ok, err
-	}
-	id, err := strconv.ParseInt(v, 10, 64)
-	if err != nil {
-		return 0, false, err
-	}
-	return id, true, nil
+func (r *Repository) GetMentionRole(guildID string) (string, bool, error) {
+	return r.GetSetting(guildID, mentionRoleKey)
 }
 
-func (r *Repository) SetMentionRole(guildID string, roleID int64) error {
-	return r.SetSetting(guildID, mentionRoleKey, strconv.FormatInt(roleID, 10))
+func (r *Repository) SetMentionRole(guildID, roleID string) error {
+	return r.SetSetting(guildID, mentionRoleKey, roleID)
 }
 
 func (r *Repository) UnsetMentionRole(guildID string) (bool, error) {

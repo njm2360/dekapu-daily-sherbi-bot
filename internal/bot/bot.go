@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -246,16 +245,11 @@ func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate
 
 	guildID := i.GuildID
 	channelID := i.ChannelID
-	chID, err := strconv.ParseInt(channelID, 10, 64)
-	if err != nil {
-		replyEphemeral(s, i, "チャンネルIDの解析に失敗したよ。")
-		return
-	}
 
 	if err := b.repo.EnsureGuild(guildID); err != nil {
 		log.Printf("EnsureGuild: %v", err)
 	}
-	if err := b.repo.SetChannel(guildID, chID, l); err != nil {
+	if err := b.repo.SetChannel(guildID, channelID, l); err != nil {
 		replyEphemeral(s, i, "設定の保存に失敗したよ。")
 		log.Printf("SetChannel: %v", err)
 		return
@@ -270,12 +264,7 @@ func (b *Bot) cmdSetChannel(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 func (b *Bot) cmdUnsetChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	chID, err := strconv.ParseInt(i.ChannelID, 10, 64)
-	if err != nil {
-		replyEphemeral(s, i, "チャンネルIDの解析に失敗したよ。")
-		return
-	}
-	ok, err := b.repo.UnsetChannel(i.GuildID, chID)
+	ok, err := b.repo.UnsetChannel(i.GuildID, i.ChannelID)
 	if err != nil {
 		replyEphemeral(s, i, "設定の解除に失敗したよ。")
 		log.Printf("UnsetChannel: %v", err)
@@ -300,15 +289,10 @@ func (b *Bot) cmdSetMentionRole(s *discordgo.Session, i *discordgo.InteractionCr
 		replyEphemeral(s, i, "ロールが指定されていないよ。")
 		return
 	}
-	rid, err := strconv.ParseInt(roleID, 10, 64)
-	if err != nil {
-		replyEphemeral(s, i, "ロールIDの解析に失敗したよ。")
-		return
-	}
 	if err := b.repo.EnsureGuild(i.GuildID); err != nil {
 		log.Printf("EnsureGuild: %v", err)
 	}
-	if err := b.repo.SetMentionRole(i.GuildID, rid); err != nil {
+	if err := b.repo.SetMentionRole(i.GuildID, roleID); err != nil {
 		replyEphemeral(s, i, "設定の保存に失敗したよ。")
 		log.Printf("SetMentionRole: %v", err)
 		return

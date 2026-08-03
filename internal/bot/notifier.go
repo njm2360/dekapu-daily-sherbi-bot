@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -78,7 +77,7 @@ func (n *Notifier) Notify(kind detector.Kind, daily ball.Daily) {
 			defer wg.Done()
 
 			message := buildMessage(kind, daily.BallIDs, date, cfg.Lang)
-			channelID := strconv.FormatInt(cfg.ChannelID, 10)
+			channelID := cfg.ChannelID
 
 			roleID, hasRole, err := n.repo.GetMentionRole(cfg.GuildID)
 			if err != nil {
@@ -86,7 +85,7 @@ func (n *Notifier) Notify(kind detector.Kind, daily ball.Daily) {
 			}
 			content := message
 			if hasRole {
-				content = fmt.Sprintf("<@&%d>\n%s", roleID, message)
+				content = fmt.Sprintf("<@&%s>\n%s", roleID, message)
 			}
 
 			if _, err := n.session.ChannelMessageSend(channelID, content); err != nil {
