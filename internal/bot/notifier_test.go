@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/detector"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 )
 
@@ -41,7 +42,7 @@ func TestDateHeader_EN_AllMonths(t *testing.T) {
 // NewDayメッセージのJA全文が日付ヘッダ+ボール名+説明の順で組み立てられる
 func TestBuildMessage_NewDay_JA(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(NewDay, []int{1, 2}, now, language.LangJA)
+	got := buildMessage(detector.NewDay, []int{1, 2}, now, language.LangJA)
 	want := strings.Join([]string{
 		"# 5/9",
 		"## 橙",
@@ -57,7 +58,7 @@ func TestBuildMessage_NewDay_JA(t *testing.T) {
 // NewDayメッセージのEN全文が日付ヘッダ+ボール名+説明の順で組み立てられる
 func TestBuildMessage_NewDay_EN(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(NewDay, []int{1, 2}, now, language.LangEN)
+	got := buildMessage(detector.NewDay, []int{1, 2}, now, language.LangEN)
 	want := strings.Join([]string{
 		"# May 9",
 		"## Orange",
@@ -73,7 +74,7 @@ func TestBuildMessage_NewDay_EN(t *testing.T) {
 // SeedUpdateはJAヘッダにシード更新の注釈が付く
 func TestBuildMessage_SeedUpdate_JA(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(SeedUpdate, []int{1}, now, language.LangJA)
+	got := buildMessage(detector.SeedUpdate, []int{1}, now, language.LangJA)
 	if !strings.HasPrefix(got, "# 5/9 (シード更新でデイリーが変わったよ)") {
 		t.Errorf("buildMessage SeedUpdate JA missing seed-update header:\n%s", got)
 	}
@@ -85,7 +86,7 @@ func TestBuildMessage_SeedUpdate_JA(t *testing.T) {
 // SeedUpdateはENヘッダにシード更新の注釈が付く
 func TestBuildMessage_SeedUpdate_EN(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(SeedUpdate, []int{1}, now, language.LangEN)
+	got := buildMessage(detector.SeedUpdate, []int{1}, now, language.LangEN)
 	if !strings.HasPrefix(got, "# May 9 (Daily updated by seed change)") {
 		t.Errorf("buildMessage SeedUpdate EN missing seed-update header:\n%s", got)
 	}
@@ -97,7 +98,7 @@ func TestBuildMessage_SeedUpdate_EN(t *testing.T) {
 // 未定義IDはJAフォールバック文言で出力される
 func TestBuildMessage_UndefinedID_JA(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(NewDay, []int{1, 99}, now, language.LangJA)
+	got := buildMessage(detector.NewDay, []int{1, 99}, now, language.LangJA)
 	want := strings.Join([]string{
 		"# 5/9",
 		"## 橙",
@@ -113,7 +114,7 @@ func TestBuildMessage_UndefinedID_JA(t *testing.T) {
 // 未定義IDはENフォールバック文言で出力される
 func TestBuildMessage_UndefinedID_EN(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	got := buildMessage(NewDay, []int{99}, now, language.LangEN)
+	got := buildMessage(detector.NewDay, []int{99}, now, language.LangEN)
 	want := strings.Join([]string{
 		"# May 9",
 		"## Unknown (ID:99)",

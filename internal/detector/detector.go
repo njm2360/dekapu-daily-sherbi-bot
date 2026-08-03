@@ -1,4 +1,4 @@
-package bot
+package detector
 
 import (
 	"log"
@@ -6,6 +6,13 @@ import (
 
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/dailyhistory"
+)
+
+type Kind int
+
+const (
+	NewDay Kind = iota
+	SeedUpdate
 )
 
 type DailyStore interface {
@@ -25,7 +32,7 @@ type Detector struct {
 	lastSeen *dailyhistory.Record
 }
 
-func NewDetector(store DailyStore, notifier DailyNotifier) (*Detector, error) {
+func New(store DailyStore, notifier DailyNotifier) (*Detector, error) {
 	latest, err := store.Latest()
 	if err != nil {
 		return nil, err

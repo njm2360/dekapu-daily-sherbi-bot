@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,10 +11,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/ball"
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/balltext"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/dailyhistory"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/settings"
-	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/watcher"
 )
 
 type Bot struct {
@@ -23,17 +22,13 @@ type Bot struct {
 	repo     *settings.Repository
 	history  *dailyhistory.Repository
 	notifier *Notifier
-	logDir   string
-	stateDir string
-
-	detector *Detector
 
 	readyCh       chan struct{}
 	readyOnce     sync.Once
 	initialGuilds sync.Map // guildID -> struct{}: known via Ready or already-logged join
 }
 
-func New(repo *settings.Repository, history *dailyhistory.Repository, token, logDir, stateDir string) (*Bot, error) {
+func New(repo *settings.Repository, history *dailyhistory.Repository, token string) (*Bot, error) {
 	s, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, err
@@ -44,13 +39,15 @@ func New(repo *settings.Repository, history *dailyhistory.Repository, token, log
 		repo:     repo,
 		history:  history,
 		notifier: NewNotifier(s, repo),
-		logDir:   logDir,
-		stateDir: stateDir,
 		readyCh:  make(chan struct{}),
 	}
 	b.registerHandlers()
 	return b, nil
 }
+
+func (b *Bot) Notifier() *Notifier { return b.notifier }
+
+func (b *Bot) Ready() <-chan struct{} { return b.readyCh }
 
 func (b *Bot) Run(ctx context.Context) error {
 	if err := b.session.Open(); err != nil {
@@ -62,32 +59,7 @@ func (b *Bot) Run(ctx context.Context) error {
 		return fmt.Errorf("register commands: %w", err)
 	}
 
-	detector, err := NewDetector(b.history, b.notifier)
-	if err != nil {
-		return fmt.Errorf("init detector: %w", err)
-	}
-	b.detector = detector
-
-	stateFile := filepath.Join(b.stateDir, "state.json")
-	repo := watcher.NewFileRepo(stateFile)
-
-	newHandler := func(_ string) watcher.LineHandler {
-		return func(_, line string) {
-			b.detector.OnLine(line)
-		}
-	}
-
-	w := watcher.NewLogWatcher(b.logDir, newHandler, repo, true)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		_ = w.Run(ctx)
-	}()
-
 	<-ctx.Done()
-	wg.Wait()
 	return nil
 }
 
@@ -200,13 +172,13 @@ var slashCommands = []*discordgo.ApplicationCommand{
 }
 
 func ballColorOption(name, descEN, descJA string, required bool) *discordgo.ApplicationCommandOption {
-	ids := ball.AllIDs()
+	ids := balltext.AllIDs()
 	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(ids))
 	for _, id := range ids {
 		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-			Name: ball.Name(id, language.LangEN),
+			Name: balltext.Name(id, language.LangEN),
 			NameLocalizations: map[discordgo.Locale]string{
-				discordgo.Japanese: ball.Name(id, language.LangJA),
+				discordgo.Japanese: balltext.Name(id, language.LangJA),
 			},
 			Value: id,
 		})
@@ -387,7 +359,7 @@ func (b *Bot) cmdFindDaily(s *discordgo.Session, i *discordgo.InteractionCreate,
 func formatFindDailyResult(query []int, matches []dailyhistory.Match, lang language.Lang) string {
 	queryNames := make([]string, len(query))
 	for j, id := range query {
-		queryNames[j] = ball.Name(id, lang)
+		queryNames[j] = balltext.Name(id, lang)
 	}
 
 	var sb strings.Builder
@@ -444,7 +416,7 @@ func discordLocaleToLang(locale discordgo.Locale) language.Lang {
 func ballNames(ids []int, lang language.Lang) string {
 	parts := make([]string, len(ids))
 	for j, id := range ids {
-		parts[j] = ball.Name(id, lang)
+		parts[j] = balltext.Name(id, lang)
 	}
 	sep := "・"
 	if lang == language.LangEN {

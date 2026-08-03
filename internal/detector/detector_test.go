@@ -1,4 +1,4 @@
-package bot
+package detector
 
 import (
 	"errors"
@@ -59,9 +59,9 @@ func (f *fakeNotifier) Notify(kind Kind, daily ball.Daily) {
 
 func mustDetector(t *testing.T, store DailyStore, notifier DailyNotifier) *Detector {
 	t.Helper()
-	d, err := NewDetector(store, notifier)
+	d, err := New(store, notifier)
 	if err != nil {
-		t.Fatalf("NewDetector: %v", err)
+		t.Fatalf("New: %v", err)
 	}
 	return d
 }
@@ -302,11 +302,11 @@ func TestDetector_InsertError_NoNotify_NoStateAdvance(t *testing.T) {
 	assertNotifies(t, notifier.calls, []notifyCall{{NewDay, 100, []int{5, 15, 6}}})
 }
 
-// LatestがエラーならNewDetectorも失敗する
-func TestNewDetector_StoreErrorPropagates(t *testing.T) {
+// LatestがエラーならNewも失敗する
+func TestNew_StoreErrorPropagates(t *testing.T) {
 	store := &errStore{err: errors.New("read failure")}
-	if _, err := NewDetector(store, &fakeNotifier{}); err == nil {
-		t.Fatal("expected error from NewDetector when Latest fails")
+	if _, err := New(store, &fakeNotifier{}); err == nil {
+		t.Fatal("expected error from New when Latest fails")
 	}
 }
 

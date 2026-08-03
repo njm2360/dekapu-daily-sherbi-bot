@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/joho/godotenv"
@@ -13,7 +14,9 @@ import (
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/bot"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/dailyhistory"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/db"
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/detector"
 	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/settings"
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/watcher"
 )
 
 func main() {
@@ -48,15 +51,41 @@ func main() {
 		log.Fatal("DISCORD_BOT_TOKEN is required")
 	}
 
-	b, err := bot.New(settingsRepo, historyRepo, token, logDir, dataDir)
+	b, err := bot.New(settingsRepo, historyRepo, token)
 	if err != nil {
 		log.Fatalf("bot.New: %v", err)
 	}
 
+	det, err := detector.New(historyRepo, b.Notifier())
+	if err != nil {
+		log.Fatalf("init detector: %v", err)
+	}
+
+	stateRepo := watcher.NewFileRepo(filepath.Join(dataDir, "state.json"))
+	newHandler := func(_ string) watcher.LineHandler {
+		return func(_, line string) {
+			det.OnLine(line)
+		}
+	}
+	w := watcher.NewLogWatcher(logDir, newHandler, stateRepo, true)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := b.Run(ctx); err != nil {
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-b.Ready():
+		}
+		_ = w.Run(ctx)
+	})
+
+	err = b.Run(ctx)
+	stop()
+	wg.Wait()
+	if err != nil {
 		log.Fatalf("bot.Run: %v", err)
 	}
 }

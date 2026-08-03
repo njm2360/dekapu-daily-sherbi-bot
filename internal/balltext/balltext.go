@@ -1,0 +1,101 @@
+package balltext
+
+import (
+	"sort"
+	"strconv"
+
+	"github.com/njm2360/dekapu-daily-sherbi-bot/internal/language"
+)
+
+type Info struct {
+	Name        string
+	Description string
+}
+
+var names = map[language.Lang]map[int]Info{
+	language.LangJA: {
+		1:  {"橙", "連チャンした後に別のボールに変わるよ"},
+		2:  {"緑", "ルーレットフィーバーを回すよ"},
+		4:  {"ピンク", "ボールをさらに増やすよ"},
+		5:  {"紫", "プッシャー台を平らにしてボールを増やすよ"},
+		6:  {"白", "多めにメダルを出すよ"},
+		7:  {"水色", "シャルべチャンスの抽選ボールを出すよ"},
+		8:  {"灰桜", "シャルべチャンスで1マス進むよ"},
+		9:  {"群青", "シャルベJPプログレッシブカウンターを増やすよ"},
+		10: {"赤", "連チャンした後に別のボールに変わるよ"},
+		11: {"クリーム", "シャルべチャンスの倍率を上げるよ"},
+		12: {"ミント", "強い抽選ボールを出すことがあるよ"},
+		13: {"ピーチ", "SPメダルを出すよ"},
+		14: {"星空", "時々同じボールを2つ出すよ"},
+		15: {"草原", "パレッタチャンスの倍率を上げるよ"},
+		16: {"黒", "たまにレインボーシャルべを出すよ"},
+		17: {"黄色", "パレッタチャンスを早く回すよ"},
+		18: {"ラベンダー", "パレッタJPプログレッシブカウンターを増やすよ"},
+		19: {"ライム", "メダル投入量を一時的に増やすよ"},
+		20: {"若葉", "たまにレアドロップを出現させるよ"},
+	},
+	language.LangEN: {
+		1:  {"Orange", "Chains itself then changes to another color"},
+		2:  {"Green", "Spins fever roulettes"},
+		4:  {"Pink", "Spawns more balls"},
+		5:  {"Purple", "Flattens pusher and spawns balls"},
+		6:  {"White", "More payouts"},
+		7:  {"Cyan", "Spawns lottery balls for Sherbi Chance"},
+		8:  {"Pale Pink", "Advance 1 step at Sherbi Chance"},
+		9:  {"Navy", "Raises Sherbi JACKPOT prog. counter"},
+		10: {"Red", "Chains itself then changes to another color"},
+		11: {"Cream", "Increases multiplier for Sherbi Chance"},
+		12: {"Mint", "Has a chance to spawn strong lottery balls"},
+		13: {"Peach", "Spawns a SP medal"},
+		14: {"Starry", "May spawn two duplicated balls"},
+		15: {"Meadow", "Increases multiplier for Paletta Chance"},
+		16: {"Black", "Has small chance to spawn Rainbow Sherbi"},
+		17: {"Yellow", "Speeds up Paletta Chance game"},
+		18: {"Lavender", "Increases Paletta JACKPOT prog. counter"},
+		19: {"Lime", "Temporarily increases medal insertion amount"},
+		20: {"Sprout", "Has small chance to spawn rare resources"},
+	},
+}
+
+func AllIDs() []int {
+	ids := make([]int, 0, len(names[language.LangJA]))
+	for id := range names[language.LangJA] {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	return ids
+}
+
+func Name(id int, lang language.Lang) string {
+	dict, ok := names[lang]
+	if !ok {
+		dict = names[language.LangJA]
+	}
+	if info, ok := dict[id]; ok {
+		return info.Name
+	}
+	return unknownInfo(id, lang).Name
+}
+
+func Format(ids []int, lang language.Lang) []Info {
+	dict, ok := names[lang]
+	if !ok {
+		dict = names[language.LangJA]
+	}
+	out := make([]Info, 0, len(ids))
+	for _, id := range ids {
+		if info, ok := dict[id]; ok {
+			out = append(out, info)
+		} else {
+			out = append(out, unknownInfo(id, lang))
+		}
+	}
+	return out
+}
+
+func unknownInfo(id int, lang language.Lang) Info {
+	if lang == language.LangEN {
+		return Info{Name: "Unknown (ID:" + strconv.Itoa(id) + ")", Description: "Please check in the world"}
+	}
+	return Info{Name: "未定義 (ID:" + strconv.Itoa(id) + ")", Description: "ワールド内で確認してね"}
+}
