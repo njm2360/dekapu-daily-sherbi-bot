@@ -372,7 +372,7 @@ func formatFindDailyResult(query []int, matches []dailyhistory.Match, lang langu
 		} else {
 			fmt.Fprintf(&sb, " → %s", balls)
 		}
-		if m.Revision == 0 && hasNextRevisionForDay(matches, m.DayNumber, m.Revision) {
+		if hasNextRevisionForDay(matches, m.DayNumber, m.Revision) {
 			// next revision exists — leave the line open
 			continue
 		}
