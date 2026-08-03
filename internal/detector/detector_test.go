@@ -205,6 +205,50 @@ func TestDetector_NewDayCoincidentallySameBalls(t *testing.T) {
 	})
 }
 
+// 過去のDay行(複数ログファイルの読み直しで遅れて届く)は無視する
+func TestDetector_StaleDayLine_Ignored(t *testing.T) {
+	store := &fakeStore{}
+	notifier := &fakeNotifier{}
+	d := mustDetector(t, store, notifier)
+
+	d.OnLine(line(101, 1, 2, 3))
+	// 古いログファイル側のDay行が後から届く
+	d.OnLine(line(100, 5, 15, 6))
+	// その後の当日分は正しく処理される(シード更新)
+	d.OnLine(line(101, 7, 8, 9))
+
+	assertInserts(t, store.inserts, []insertCall{
+		{101, 0, []int{1, 2, 3}},
+		{101, 1, []int{7, 8, 9}},
+	})
+	assertNotifies(t, notifier.calls, []notifyCall{
+		{NewDay, 101, []int{1, 2, 3}},
+		{SeedUpdate, 101, []int{7, 8, 9}},
+	})
+}
+
+// 再起動後(Latest復元)でも過去のDay行は無視する
+func TestDetector_RestartThenStaleDayLine_Ignored(t *testing.T) {
+	store := &fakeStore{
+		latest: &dailyhistory.Record{
+			DayNumber: 101,
+			Revision:  0,
+			BallIDs:   []int{1, 2, 3},
+		},
+	}
+	notifier := &fakeNotifier{}
+	d := mustDetector(t, store, notifier)
+
+	d.OnLine(line(100, 5, 15, 6))
+
+	if len(store.inserts) != 0 {
+		t.Fatalf("expected no inserts, got %v", store.inserts)
+	}
+	if len(notifier.calls) != 0 {
+		t.Fatalf("expected no notifies, got %v", notifier.calls)
+	}
+}
+
 // 再起動時はLatestで前回状態が復元され、同Day・同ballsの場合は通知しない
 func TestDetector_RestartRestoresState_SilentOnRejoin(t *testing.T) {
 	store := &fakeStore{

@@ -68,6 +68,9 @@ func (d *Detector) OnLine(line string) {
 	switch {
 	case d.lastSeen == nil:
 		revision, kind = 0, NewDay
+	case parsed.DayNumber < d.lastSeen.DayNumber:
+		log.Printf("Ignore stale daily line (day=%d < lastSeen=%d)", parsed.DayNumber, d.lastSeen.DayNumber)
+		return
 	case d.lastSeen.DayNumber != parsed.DayNumber:
 		revision, kind = 0, NewDay
 	case equalInts(d.lastSeen.BallIDs, parsed.BallIDs):
