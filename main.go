@@ -28,6 +28,14 @@ func main() {
 		log.Fatalf("mkdir data: %v", err)
 	}
 
+	logFile, err := os.OpenFile(filepath.Join(dataDir, "bot.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		log.Printf("open log file: %v (falling back to stderr)", err)
+	} else {
+		log.SetOutput(logFile)
+		defer logFile.Close()
+	}
+
 	conn, err := db.Open(filepath.Join(dataDir, "data.db"))
 	if err != nil {
 		log.Fatalf("db.Open: %v", err)
